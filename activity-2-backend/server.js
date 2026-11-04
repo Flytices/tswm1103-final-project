@@ -43,12 +43,14 @@ db.serialize(() => {
     department TEXT NOT NULL,
     date TEXT NOT NULL,
     purpose TEXT DEFAULT 'General Consultation',
+    time_slot TEXT DEFAULT 'Morning (8:00 AM - 12:00 PM)',
     status TEXT DEFAULT 'Pending',
     created_by TEXT
   )`);
 
-  // Safe migration in case appointments table was created in Activity 3 without 'purpose'
+  // Safe migrations in case tables were created previously without these columns
   db.run(`ALTER TABLE appointments ADD COLUMN purpose TEXT DEFAULT 'General Consultation'`, () => {});
+  db.run(`ALTER TABLE appointments ADD COLUMN time_slot TEXT DEFAULT 'Morning (8:00 AM - 12:00 PM)'`, () => {});
 
   // Performance Index
   db.run(`CREATE INDEX IF NOT EXISTS idx_appointments_status_date ON appointments(status, date)`);
@@ -97,7 +99,7 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-// ENDPOINT 1: POST /api/auth/register (New User Registration for Final Project)
+// ENDPOINT 1: POST /api/auth/register
 app.post('/api/auth/register', async (req, res) => {
   const username = sanitizeInput(req.body.username);
   const password = req.body.password;
@@ -159,18 +161,19 @@ app.post('/api/auth/login', (req, res) => {
 // ENDPOINT 3: GET /api/appointments
 app.get('/api/appointments', (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 50, 100);
-  db.all(`SELECT id, student, department, date, purpose, status FROM appointments ORDER BY id DESC LIMIT ?`, [limit], (err, rows) => {
+  db.all(`SELECT id, student, department, date, purpose, time_slot, status FROM appointments ORDER BY id DESC LIMIT ?`, [limit], (err, rows) => {
     if (err) return res.status(500).json({ success: false, error: 'Failed to retrieve appointments.' });
     res.status(200).json({ success: true, count: rows.length, data: rows });
   });
 });
 
-// ENDPOINT 4: POST /api/appointments
+// ENDPOINT 4: POST /api/appointments (Feature 3: Same-day time slot double-booking protection)
 app.post('/api/appointments', authenticateToken, (req, res) => {
   const cleanStudent = sanitizeInput(req.body.student);
   const cleanDepartment = sanitizeInput(req.body.department);
   const cleanDate = sanitizeInput(req.body.date);
   const cleanPurpose = sanitizeInput(req.body.purpose) || 'General Consultation';
+  const cleanTimeSlot = sanitizeInput(req.body.time_slot || req.body.timeSlot) || 'Morning (8:00 AM - 12:00 PM)';
 
   if (!cleanStudent || cleanStudent.length < 3 || !cleanDepartment || !cleanDate) {
     return res.status(400).json({
@@ -179,15 +182,26 @@ app.post('/api/appointments', authenticateToken, (req, res) => {
     });
   }
 
-  const sql = `INSERT INTO appointments (student, department, date, purpose, status, created_by) VALUES (?, ?, ?, ?, 'Pending', ?)`;
-  db.run(sql, [cleanStudent, cleanDepartment, cleanDate, cleanPurpose, req.user.username], function (err) {
-    if (err) return res.status(500).json({ success: false, error: 'Database insert failed.' });
+  // Check if someone has already reserved this exact date and time slot
+  const checkQuery = `SELECT * FROM appointments WHERE date = ? AND time_slot = ?`;
+  db.get(checkQuery, [cleanDate, cleanTimeSlot], (err, existingRow) => {
+    if (existingRow) {
+      return res.status(400).json({
+        success: false,
+        error: `Reservation Blocked: The ${cleanTimeSlot} slot on ${cleanDate} is already reserved!`
+      });
+    }
 
-    db.get(`SELECT id, student, department, date, purpose, status FROM appointments WHERE id = ?`, [this.lastID], (err, newRecord) => {
-      res.status(201).json({
-        success: true,
-        message: 'Appointment booked successfully.',
-        data: newRecord
+    const sql = `INSERT INTO appointments (student, department, date, purpose, time_slot, status, created_by) VALUES (?, ?, ?, ?, ?, 'Pending', ?)`;
+    db.run(sql, [cleanStudent, cleanDepartment, cleanDate, cleanPurpose, cleanTimeSlot, req.user.username], function (err) {
+      if (err) return res.status(500).json({ success: false, error: 'Database insert failed.' });
+
+      db.get(`SELECT id, student, department, date, purpose, time_slot, status FROM appointments WHERE id = ?`, [this.lastID], (err, newRecord) => {
+        res.status(201).json({
+          success: true,
+          message: `Appointment booked successfully for student: ${newRecord.student} (${newRecord.time_slot})!`,
+          data: newRecord
+        });
       });
     });
   });
@@ -204,7 +218,7 @@ app.patch('/api/appointments/:id/status', authenticateToken, requireAdmin, (req,
       if (err) return res.status(500).json({ success: false, error: 'Database update failed.' });
       res.status(200).json({
         success: true,
-        message: `Status updated to ${newStatus}.`,
+        message: `Status updated to ${newStatus} for student: ${appointment.student}.`,
         data: { ...appointment, status: newStatus }
       });
     });
@@ -221,13 +235,17 @@ app.delete('/api/appointments/:id', authenticateToken, requireAdmin, (req, res) 
   });
 });
 
-// ENDPOINT 7: GET /api/health (Deployment Smoke Test)
+// ENDPOINT 7: GET /api/health
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     status: 'UP',
     environment: process.env.NODE_ENV || 'development',
     timestamp: new Date().toISOString()
   });
+});
+
+app.get('/', (req, res) => {
+  res.send('PCU Appointment Backend API is running.');
 });
 
 app.listen(PORT, () => {
