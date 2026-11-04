@@ -56,10 +56,12 @@ body {
   display: grid;
   grid-template-columns: 1fr 2fr;
   gap: 1.5rem;
+  align-items: start;
 }
 
 .panel {
   background: white;
+  color: #1e293b; /* Fixes white-on-white text inside panels */
   padding: 1.5rem;
   border-radius: 8px;
   box-shadow: 0 2px 5px rgba(0,0,0,0.08);
@@ -68,12 +70,20 @@ body {
 .panel h3 { margin-bottom: 1rem; color: #003366; }
 
 .form-group { margin-bottom: 1rem; }
-.form-group label { display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.9rem; }
-.form-group input, .form-group select {
+.form-group label { 
+  display: block; 
+  margin-bottom: 0.4rem; 
+  font-weight: 600; 
+  font-size: 0.9rem; 
+  color: #003366; /* Dark blue form labels */
+}
+.form-group input, .form-group select, .filter-bar input, .filter-bar select {
   width: 100%;
   padding: 0.6rem;
   border: 1px solid #ccc;
   border-radius: 4px;
+  color: #0f172a; /* Dark text inside inputs and dropdowns */
+  background-color: #ffffff;
 }
 
 .btn {
@@ -87,12 +97,76 @@ body {
 .btn-primary { background: #003366; color: white; width: 100%; }
 .btn-danger { background: #d9534f; color: white; padding: 0.3rem 0.6rem; font-size: 0.8rem; }
 
-.filter-bar { margin-bottom: 1rem; display: flex; gap: 0.5rem; }
+.filter-bar {
+  margin-bottom: 1rem;
+  display: flex;
+  gap: 0.75rem;
+}
 
-.table-responsive { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-th, td { text-align: left; padding: 0.75rem; border-bottom: 1px solid #eee; }
-th { background-color: #f8f9fa; color: #003366; }
+.filter-bar input {
+  flex: 2;       /* Gives the Search bar 2/3 of the width */
+  width: auto;   /* Stops width: 100% from crushing the box */
+}
+
+.filter-bar select {
+  flex: 1;       /* Gives the All Statuses dropdown 1/3 of the width */
+  width: auto;
+}
+
+/* Turn the Appointment Schedule table into a vertical card list */
+.table-responsive {
+  max-height: 480px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 0.4rem;
+}
+
+.table-responsive thead {
+  display: none; /* Hide horizontal column headers */
+}
+
+.table-responsive table,
+.table-responsive tbody {
+  display: block;
+  width: 100%;
+}
+
+/* Each appointment is a vertical box with a border and spacing */
+.table-responsive tbody tr {
+  display: flex;
+  flex-direction: column;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-left: 5px solid #003366;
+  border-radius: 8px;
+  margin-bottom: 0.85rem;
+  padding: 0.75rem 1rem;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.table-responsive tbody td {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: none;
+  border-bottom: 1px dashed #e2e8f0;
+  padding: 0.45rem 0;
+  font-size: 0.9rem;
+  color: #0f172a;
+}
+
+.table-responsive tbody td:last-child {
+  border-bottom: none;
+  padding-top: 0.6rem;
+}
+
+/* Automatically add vertical labels on the left of each field */
+.table-responsive tbody td:nth-child(1)::before { content: "Student:"; font-weight: 700; color: #003366; }
+.table-responsive tbody td:nth-child(2)::before { content: "Department:"; font-weight: 700; color: #003366; }
+.table-responsive tbody td:nth-child(3)::before { content: "Purpose:"; font-weight: 700; color: #003366; }
+.table-responsive tbody td:nth-child(4)::before { content: "Date & Time:"; font-weight: 700; color: #003366; }
+.table-responsive tbody td:nth-child(5)::before { content: "Status:"; font-weight: 700; color: #003366; }
+.table-responsive tbody td:nth-child(6)::before { content: "Action:"; font-weight: 700; color: #003366; }
 
 .badge {
   padding: 0.25rem 0.5rem;

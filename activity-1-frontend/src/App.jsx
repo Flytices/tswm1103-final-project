@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import './App.css';
 
 const API_URL = 'http://localhost:5000/api/appointments';
@@ -32,6 +33,7 @@ function AuthPanel({ user, onLogin, onRegister, authMessage }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('Student');
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -81,16 +83,37 @@ function AuthPanel({ user, onLogin, onRegister, authMessage }) {
               style={{ width: '100%', padding: '0.65rem', borderRadius: '6px', border: '1.5px solid #cbd5e1' }}
             />
           </div>
+          
+          {/* Feature 1: Password with Show/Hide toggle */}
           <div style={{ flex: 1, minWidth: '170px' }}>
             <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 600, fontSize: '0.85rem' }}>Password</label>
-            <input 
-              type="password" 
-              placeholder="Enter password"
-              value={password} 
-              onChange={(e) => setPassword(e.target.value)} 
-              style={{ width: '100%', padding: '0.65rem', borderRadius: '6px', border: '1.5px solid #cbd5e1' }}
-            />
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <input 
+                type={showPassword ? 'text' : 'password'} 
+                placeholder="Enter password"
+                value={password} 
+                onChange={(e) => setPassword(e.target.value)} 
+                style={{ width: '100%', padding: '0.65rem', paddingRight: '3.5rem', borderRadius: '6px', border: '1.5px solid #cbd5e1' }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: 'absolute',
+                  right: '0.5rem',
+                  background: 'none',
+                  border: 'none',
+                  color: '#0284c7',
+                  fontWeight: 'bold',
+                  fontSize: '0.8rem',
+                  cursor: 'pointer'
+                }}
+              >
+                {showPassword ? 'Hide' : 'Show'}
+              </button>
+            </div>
           </div>
+
           {isRegistering && (
             <div style={{ minWidth: '140px' }}>
               <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 600, fontSize: '0.85rem' }}>Role</label>
@@ -136,14 +159,16 @@ function AppointmentForm({ onAddAppointment, serverError, successMsg }) {
   const [department, setDepartment] = useState('College of Informatics');
   const [date, setDate] = useState('');
   const [purpose, setPurpose] = useState('');
+  const [timeSlot, setTimeSlot] = useState('Morning (8:00 AM - 12:00 PM)'); // Feature 3: Time Slot state
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const isSaved = await onAddAppointment({ student, department, date, purpose });
+    const isSaved = await onAddAppointment({ student, department, date, purpose, time_slot: timeSlot });
     if (isSaved) {
       setStudent('');
       setDate('');
       setPurpose('');
+      setTimeSlot('Morning (8:00 AM - 12:00 PM)');
     }
   };
 
@@ -192,6 +217,14 @@ function AppointmentForm({ onAddAppointment, serverError, successMsg }) {
             onChange={(e) => setDate(e.target.value)} 
           />
         </div>
+        {/* Feature 3: Time Slot Selection */}
+        <div className="form-group">
+          <label>Time Slot</label>
+          <select value={timeSlot} onChange={(e) => setTimeSlot(e.target.value)}>
+            <option value="Morning (8:00 AM - 12:00 PM)">Morning (8:00 AM - 12:00 PM)</option>
+            <option value="Afternoon (1:00 PM - 4:00 PM)">Afternoon (1:00 PM - 4:00 PM)</option>
+          </select>
+        </div>
         <button type="submit" className="btn btn-primary">Book Appointment</button>
       </form>
     </div>
@@ -211,7 +244,7 @@ function AppointmentTable({ appointments, loading, onToggleStatus, onDelete }) {
             <th>Student</th>
             <th>Department</th>
             <th>Purpose</th>
-            <th>Date</th>
+            <th style={{ whiteSpace: 'nowrap' }}>Date & Time Slot</th>
             <th>Status</th>
             <th>Action</th>
           </tr>
@@ -225,7 +258,12 @@ function AppointmentTable({ appointments, loading, onToggleStatus, onDelete }) {
                 <td>{apt.student}</td>
                 <td>{apt.department}</td>
                 <td>{apt.purpose || 'General Consultation'}</td>
-                <td>{apt.date}</td>
+                <td className="date-time-cell">
+                  <span>{apt.date}</span>{' '}
+                  <small style={{ color: '#0284c7', fontWeight: 'bold', marginLeft: '0.35rem' }}>
+                    • {apt.time_slot || 'Morning (8:00 AM - 12:00 PM)'}
+                  </small>
+                </td>
                 <td onClick={() => onToggleStatus(apt.id)} style={{ cursor: 'pointer' }}>
                   <StatusBadge status={apt.status} />
                 </td>
@@ -280,12 +318,15 @@ export default function App() {
       });
       const result = await response.json();
       if (!response.ok) {
+        toast.error(result.error);
         setAuthMessage({ text: result.error, isError: true });
         return false;
       }
+      toast.success(result.message);
       setAuthMessage({ text: result.message, isError: false });
       return true;
     } catch (err) {
+      toast.error('Registration request failed.');
       setAuthMessage({ text: 'Registration request failed.', isError: true });
       return false;
     }
@@ -302,13 +343,16 @@ export default function App() {
       });
       const result = await response.json();
       if (!response.ok) {
+        toast.error(result.error);
         setAuthMessage({ text: result.error, isError: true });
         return;
       }
+      toast.success(result.message);
       setToken(result.token);
       setUser(result.user);
       setAuthMessage({ text: result.message, isError: false });
     } catch (err) {
+      toast.error('Login request failed.');
       setAuthMessage({ text: 'Login request failed.', isError: true });
     }
   };
@@ -316,6 +360,7 @@ export default function App() {
   const handleLogout = () => {
     setToken('');
     setUser(null);
+    toast('You have logged out.');
     setAuthMessage({ text: 'You have logged out.', isError: true });
   };
 
@@ -333,13 +378,16 @@ export default function App() {
       });
       const result = await response.json();
       if (!response.ok) {
+        toast.error(result.error);
         setServerError(result.error);
         return false;
       }
+      toast.success(result.message);
       setAppointments([result.data, ...appointments]);
       setSuccessMsg(result.message);
       return true;
     } catch (err) {
+      toast.error('Network error while saving.');
       setServerError('Network error while saving.');
       return false;
     }
@@ -355,12 +403,15 @@ export default function App() {
       });
       const result = await response.json();
       if (!response.ok) {
+        toast.error(result.error);
         setServerError(result.error);
         return;
       }
+      toast.success(result.message);
       setAppointments(appointments.map(apt => apt.id === id ? result.data : apt));
       setSuccessMsg(result.message);
     } catch (err) {
+      toast.error('Failed to update status.');
       setServerError('Failed to update status.');
     }
   };
@@ -375,12 +426,15 @@ export default function App() {
       });
       const result = await response.json();
       if (!response.ok) {
+        toast.error(result.error);
         setServerError(result.error);
         return;
       }
+      toast.success(result.message);
       setAppointments(appointments.filter(apt => apt.id !== id));
       setSuccessMsg(result.message);
     } catch (err) {
+      toast.error('Failed to delete appointment.');
       setServerError('Failed to delete appointment.');
     }
   };
