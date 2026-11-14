@@ -84,7 +84,7 @@ function AuthPanel({ user, onLogin, onRegister, authMessage }) {
             />
           </div>
           
-          {/* Feature 1: Password with Show/Hide toggle */}
+          {/* Password with Show/Hide toggle */}
           <div style={{ flex: 1, minWidth: '170px' }}>
             <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 600, fontSize: '0.85rem' }}>Password</label>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
@@ -159,7 +159,7 @@ function AppointmentForm({ onAddAppointment, serverError, successMsg }) {
   const [department, setDepartment] = useState('College of Informatics');
   const [date, setDate] = useState('');
   const [purpose, setPurpose] = useState('');
-  const [timeSlot, setTimeSlot] = useState('Morning (8:00 AM - 12:00 PM)'); // Feature 3: Time Slot state
+  const [timeSlot, setTimeSlot] = useState('Morning (8:00 AM - 12:00 PM)'); 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -217,7 +217,7 @@ function AppointmentForm({ onAddAppointment, serverError, successMsg }) {
             onChange={(e) => setDate(e.target.value)} 
           />
         </div>
-        {/* Feature 3: Time Slot Selection */}
+        {/* Time Slot Selection */}
         <div className="form-group">
           <label>Time Slot</label>
           <select value={timeSlot} onChange={(e) => setTimeSlot(e.target.value)}>
