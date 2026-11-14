@@ -48,7 +48,7 @@ db.serialize(() => {
     created_by TEXT
   )`);
 
-  // Safe migrations in case tables were created previously without these columns
+  
   db.run(`ALTER TABLE appointments ADD COLUMN purpose TEXT DEFAULT 'General Consultation'`, () => {});
   db.run(`ALTER TABLE appointments ADD COLUMN time_slot TEXT DEFAULT 'Morning (8:00 AM - 12:00 PM)'`, () => {});
 
@@ -167,7 +167,7 @@ app.get('/api/appointments', (req, res) => {
   });
 });
 
-// ENDPOINT 4: POST /api/appointments (Feature 3: Same-day time slot double-booking protection)
+// ENDPOINT 4: POST /api/appointments 
 app.post('/api/appointments', authenticateToken, (req, res) => {
   const cleanStudent = sanitizeInput(req.body.student);
   const cleanDepartment = sanitizeInput(req.body.department);
